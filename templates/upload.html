@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1 class="page-title">{{ kpi.label }}</h1>
+
+<div class="upload-card">
+
+  <form method="POST" enctype="multipart/form-data">
+
+    {% for file_key in kpi.files %}
+      <div class="file-group">
+        <label class="file-label">
+          {{ file_key.replace('_', ' ').title() }}
+        </label>
+
+        <input type="file"
+               name="{{ file_key }}"
+               required
+               class="file-input">
+      </div>
+    {% endfor %}
+
+    <button type="submit" class="run-btn">
+      RUN KPI
+    </button>
+
+  </form>
+
+</div>
+
+{% endblock %}

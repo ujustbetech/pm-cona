@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1 class="page-title">Select KPI</h1>
+
+<div class="card-grid">
+
+  {% for kpi_id, kpi in kpis.items() %}
+    <a href="{{ url_for('upload', kpi_id=kpi_id) }}"
+       class="nav-card">
+      <h2>{{ kpi.label }}</h2>
+      <p>Upload data & view dashboard</p>
+    </a>
+  {% endfor %}
+
+</div>
+
+{% endblock %}

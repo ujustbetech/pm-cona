@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1 class="page-title">Select KRA</h1>
+
+<div class="card-grid">
+
+  {% for kra_id, kra in kras.items() %}
+
+    {% if has_subdept %}
+      <a href="{{ url_for(
+            'kpis_with_subdept',
+            dept_id=dept_id,
+            sub_id=sub_id,
+            kra_id=kra_id
+          ) }}"
+         class="nav-card">
+    {% else %}
+      <a href="{{ url_for(
+            'kpis_no_subdept',
+            dept_id=dept_id,
+            kra_id=kra_id
+          ) }}"
+         class="nav-card">
+    {% endif %}
+
+      <!-- ✅ SAFE TITLE -->
+      <div class="card-title">
+        {{ kra.get("name", kra_id.replace("_", " ").title()) }}
+      </div>
+
+      <div class="card-subtitle">
+        View KPIs
+      </div>
+
+      </a>
+
+  {% endfor %}
+
+</div>
+
+{% endblock %}
