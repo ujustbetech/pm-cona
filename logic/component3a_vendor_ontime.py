@@ -114,6 +114,11 @@ def run_component3a(df_po: pd.DataFrame,
         .reset_index()
     )
 
+    # ---------------- ADD THIS LINE (REQUIRED FIX) ----------------
+    vendor_kpi["Late_POs"] = (
+        vendor_kpi["Total_POs"] - vendor_kpi["On_Time_POs"]
+    )
+
     vendor_kpi["On_Time_Pct"] = round(
         (vendor_kpi["On_Time_POs"] /
          vendor_kpi["Total_POs"]) * 100,

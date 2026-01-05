@@ -1,56 +1,103 @@
 import plotly.express as px
+import plotly.io as pio
 
-def generate_charts(df):
+
+def generate_charts(df, chart_configs):
     charts = {}
 
-    if df is None or df.empty:
-        return charts
+    for i, cfg in enumerate(chart_configs):
+        chart_type = cfg["type"]
+        title = cfg.get("title", "")
 
-    cols = df.columns.str.lower()
+        # -------------------------------------------------
+        # DONUT CHART (CATEGORY BASED)
+        # -------------------------------------------------
+        if chart_type == "donut":
+            fig = px.pie(
+                df,
+                names=cfg["column"],
+                hole=0.55,
+                title=title
+            )
 
-    # -------------------------------
-    # 1️⃣ Percentage Gauge / Donut
-    # -------------------------------
-    pct_cols = [c for c in df.columns if "pct" in c.lower() or "percent" in c.lower()]
-    if pct_cols:
-        pct_col = pct_cols[0]
-        value = df[pct_col].mean()
+            fig.update_traces(
+                domain=dict(x=[0.0, 0.45]),
+                textinfo="percent+label",
+                textposition="outside",
+                pull=[0.02] * len(df)
+            )
 
-        fig = px.pie(
-            values=[value, 100 - value],
-            names=["Achieved", "Remaining"],
-            hole=0.6,
-            title=pct_col.replace("_", " ").title()
-        )
+            fig.update_layout(
+                legend=dict(
+                    orientation="v",
+                    yanchor="middle",
+                    y=0.5,
+                    xanchor="left",
+                    x=0.7
+                ),
+                margin=dict(t=60, b=20, l=20, r=120)
+            )
 
-        charts["Performance %"] = fig.to_html(full_html=False)
+        # -------------------------------------------------
+        # BAR CHART
+        # -------------------------------------------------
+        elif chart_type == "bar":
+            fig = px.bar(
+                df,
+                x=cfg["x"],
+                y=cfg["y"],
+                title=title
+            )
 
-    # -------------------------------
-    # 2️⃣ Categorical vs Numeric Bar
-    # -------------------------------
-    cat_cols = df.select_dtypes(include="object").columns.tolist()
-    num_cols = df.select_dtypes(include="number").columns.tolist()
+        # -------------------------------------------------
+        # STACKED BAR CHART
+        # -------------------------------------------------
+        elif chart_type == "stacked_bar":
+            fig = px.bar(
+                df,
+                x=cfg["x"],
+                color=cfg["color"],
+                title=title
+            )
 
-    if cat_cols and num_cols:
-        fig = px.bar(
-            df.head(20),
-            x=cat_cols[0],
-            y=num_cols[0],
-            title=f"{num_cols[0]} by {cat_cols[0]}"
-        )
-        charts["Distribution"] = fig.to_html(full_html=False)
+        # -------------------------------------------------
+        # DONUT SUMMARY (AGGREGATED COUNTS)
+        # -------------------------------------------------
+        elif chart_type == "donut_summary":
+            fig = px.pie(
+                names=cfg["labels"],
+                values=[
+                    df[cfg["values"][0]].sum(),
+                    df[cfg["values"][1]].sum()
+                ],
+                hole=0.55,
+                title=title
+            )
 
-    # -------------------------------
-    # 3️⃣ Time Trend (if Month/Date)
-    # -------------------------------
-    time_cols = [c for c in df.columns if "month" in c.lower() or "date" in c.lower()]
-    if time_cols and num_cols:
-        fig = px.line(
-            df,
-            x=time_cols[0],
-            y=num_cols[0],
-            title=f"{num_cols[0]} Trend"
-        )
-        charts["Trend"] = fig.to_html(full_html=False)
+            fig.update_traces(
+                 domain=dict(x=[0.0, 0.45]),
+                textinfo="percent+label",
+                textposition="outside"
+            )
+
+            fig.update_layout(
+                legend=dict(
+                    orientation="v",
+                    yanchor="middle",
+                    y=0.5,
+                    xanchor="left",
+                    x=0.5
+                ),
+                margin=dict(t=60, b=20, l=20, r=120)
+            )
+
+        else:
+            continue  # Skip unknown chart types
+
+        # -------------------------------------------------
+        # RENDER TO HTML
+        # -------------------------------------------------
+        charts[f"chart_{i}"] = pio.to_html(fig, full_html=False)
 
     return charts
+

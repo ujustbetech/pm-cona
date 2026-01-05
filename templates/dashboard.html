@@ -7,40 +7,36 @@
   <!-- KPI Title -->
   <h1 class="page-title">{{ label }}</h1>
   <p class="kpi-subtitle">Performance overview based on uploaded data</p>
+
+  <!-- Actions -->
   <div class="dashboard-actions">
-  <a href="{{ url_for('download_report') }}" class="download-btn">
-    ⬇ Download Excel Report
-  </a>
-</div>
+    <a href="{{ url_for('download_report') }}" class="download-btn">
+      ⬇ Download Excel Report
+    </a>
+  </div>
 
-
-  <!-- SUMMARY CARDS -->
+  <!-- KPI CARDS (ONLY ONCE) -->
   {% if summary %}
-  <div class="summary-grid">
+  <div class="kpi-container">
     {% for key, value in summary.items() %}
-      <div class="summary-card">
-        <div class="summary-value">{{ value }}</div>
-        <div class="summary-label">
-          {{ key.replace('_',' ').title() }}
-        </div>
+      <div class="kpi-card">
+        <div class="kpi-value">{{ value }}</div>
+        <div class="kpi-label">{{ key }}</div>
       </div>
     {% endfor %}
   </div>
   {% endif %}
 
   <!-- CHARTS -->
-{% if charts %}
-<div class="chart-grid">
-  {% for title, chart in charts.items() %}
-    <div class="chart-card">
-      <h3 class="chart-title">{{ title }}</h3>
-      {{ chart | safe }}
-    </div>
-  {% endfor %}
-</div>
-{% endif %}
-
-
+  {% if charts %}
+  <div class="chart-grid">
+    {% for chart in charts.values() %}
+      <div class="chart-card">
+        {{ chart | safe }}
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
 
   <!-- DATA TABLE -->
   {% if table_html %}

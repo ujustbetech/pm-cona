@@ -12,56 +12,64 @@ KPI ID → UI label → required Excel files → logic module → function → c
 KPI_REGISTRY = {
 
     # =====================================================
-    # INVENTORY / SUPPLY CHAIN
-    # =====================================================
-    "inventory_dormancy": {
-        "label": "% of slow-moving / dead inventory vs total stock",
-        "files": ["item_ledger"],
-        "module": "component2_inventory",
-        "function": "run_component2",
+# INVENTORY / SUPPLY CHAIN
+# =====================================================
+"inventory_dormancy": {
+    "label": "% of slow-moving / dead inventory vs total stock",
+    "files": ["item_ledger"],
+    "module": "component2_inventory",
+    "function": "run_component2",
 
-        "charts": [
-            {
-                "type": "donut",
-                "column": "Inventory_Status",
-                "title": "Inventory Status Distribution"
-            },
-            {
-                "type": "bar",
-                "x": "Item_Category",
-                "y": "Quantity",
-                "title": "Inventory by Category"
-            }
-        ]
-    },
+    "charts": [
+        {
+            # Donut chart – uses existing column
+            "type": "donut",
+            "column": "Status",
+            "title": "Inventory Status Distribution"
+        },
+        {
+            # Bar chart – FIXED COLUMN NAME
+            "type": "bar",
+            "x": "Category",
+            "y": "On_Hand",
+            "title": "Inventory Quantity by Category"
+        }
+    ]
+},
+
 
     # =====================================================
     # VENDOR MANAGEMENT
     # =====================================================
-    "vendor_ontime": {
-        "label": "95% on-time delivery rate from vendors",
-        "files": [
-            "purchase_orders",
-            "purchase_receipts",
-            "purchase_lines"
-        ],
-        "module": "component3a_vendor_ontime",
-        "function": "run_component3a",
+    
+"vendor_ontime": {
+    "label": "95% on-time delivery rate from vendors",
+    "files": [
+        "purchase_orders",
+        "purchase_receipts",
+        "purchase_lines"
+    ],
+    "module": "component3a_vendor_ontime",
+    "function": "run_component3a",
 
-        "charts": [
-            {
-                "type": "donut",
-                "column": "Delivery_Status",
-                "title": "Vendor Delivery Status"
-            },
-            {
-                "type": "stacked_bar",
-                "x": "Month",
-                "color": "Delivery_Status",
-                "title": "Monthly Vendor Delivery Performance"
-            }
-        ]
-    },
+    "charts": [
+        {
+            # Donut based on aggregated KPI output
+            "type": "donut_summary",
+            "labels": ["On Time", "Late"],
+            "values": ["On_Time_POs", "Late_POs"],
+            "title": "Vendor Delivery Status"
+        },
+        {
+            # Bar chart using aggregated dataframe
+            "type": "bar",
+            "x": "Vendor",
+            "y": "On_Time_Pct",
+            "title": "Vendor On-Time Delivery %"
+        }
+    ]
+},
+
 
     "vendor_performance": {
         "label": "Track and evaluate vendor performance regularly",

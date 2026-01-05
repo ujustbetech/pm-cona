@@ -7,11 +7,14 @@ import pandas as pd
 import io
 import os
 import sys
+import uuid
 
 from registry.hierarchy import DEPARTMENTS
 from registry.kpis import KPI_REGISTRY
 from services.excel_loader import load_excel
 from services.chart_engine import generate_charts
+from services.formatters import format_number
+
 
 
 # -------------------------------------------------
@@ -20,6 +23,10 @@ from services.chart_engine import generate_charts
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
+
+    # ✅ SAFE TEMP DIRECTORY (WORKS ON WINDOWS, PYTHONANYWHERE, LINUX)
+TMP_DIR = os.path.join(BASE_DIR, "tmp")
+os.makedirs(TMP_DIR, exist_ok=True)
 
 app = Flask(__name__)
 app.secret_key = "pm-cona-secret"
@@ -133,8 +140,7 @@ def kpis_with_subdept(dept_id, sub_id, kra_id):
     )
 
 
-# -------------------------------------------------
-# UPLOAD + RUN KPI
+# UPLOAD + RUN KPI  (FIXED)
 # -------------------------------------------------
 @app.route("/upload/<kpi_id>", methods=["GET", "POST"])
 def upload(kpi_id):
@@ -160,58 +166,67 @@ def upload(kpi_id):
     func = getattr(module, kpi["function"])
     result = func(*dfs)
 
-    # ---------------- NORMALIZE OUTPUT ----------------
     summary = {}
     df = None
     table_html = None
     charts = {}
 
-    # Case 1: (summary, df)
+    # ---------- NORMALIZE RESULT ----------
     if isinstance(result, tuple) and len(result) == 2:
-        raw_summary, df = result
-
-    # Case 2: only DataFrame
+        summary, df = result
     elif isinstance(result, pd.DataFrame):
         df = result
-        raw_summary = {}
-
-    # Case 3: only dict
     elif isinstance(result, dict):
-        raw_summary = result
-        df = None
-
-    # Case 4: fallback
+        summary = result
     else:
-        raw_summary = {"Result": result}
-        df = None
+        summary = {"Result": str(result)}
 
-    # Ensure summary is dict
-    if isinstance(raw_summary, dict):
-        summary = raw_summary
-    elif isinstance(raw_summary, (list, tuple)):
-        summary = {f"Metric {i+1}": v for i, v in enumerate(raw_summary)}
-    else:
-        summary = {"Value": raw_summary}
-
-    # Table + charts
+    # ---------- TABLE + CHARTS ----------
     if df is not None:
-        session["last_df"] = df.to_json()
-
         table_html = df.to_html(
             classes="table",
             index=False,
             border=0
         )
 
-        charts = generate_charts(df)
+        charts = generate_charts(df, kpi.get("charts", []))
+
+
+        # 🔥 SAFE TEMP FILE STORAGE (NO SESSION BLOAT)
+        report_id = str(uuid.uuid4())
+        report_path = os.path.join(TMP_DIR, f"{report_id}.csv")
+        df.to_csv(report_path, index=False)
+
+        
+
+        session["report_path"] = report_path
+
+    formatted_summary = {}
+
+    for key, value in summary.items():
+        key_lower = key.lower()
+
+    if "%" in key_lower or "percent" in key_lower:
+        formatted_summary[key] = format_number(value, "percent")
+
+    elif "value" in key_lower or "amount" in key_lower:
+        formatted_summary[key] = format_number(value, "currency")
+
+    elif "item" in key_lower or "count" in key_lower or "total" in key_lower:
+        formatted_summary[key] = format_number(value, "count")
+
+    else:
+        formatted_summary[key] = format_number(value)
+
 
     return render_template(
         "dashboard.html",
         label=kpi["label"],
-        summary=summary,
+        summary=formatted_summary,
         table_html=table_html,
         charts=charts
     )
+
 
 
 # -------------------------------------------------
@@ -219,22 +234,16 @@ def upload(kpi_id):
 # -------------------------------------------------
 @app.route("/download-report")
 def download_report():
-    if "last_df" not in session:
+    report_path = session.get("report_path")
+
+    if not report_path or not os.path.exists(report_path):
         return "No report available", 400
 
-    df = pd.read_json(session["last_df"])
-
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        df.to_excel(writer, index=False, sheet_name="Report")
-
-    output.seek(0)
-
     return send_file(
-        output,
-        download_name="pm_cona_kpi_report.xlsx",
+        report_path,
         as_attachment=True,
-        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        download_name="pm_cona_kpi_report.csv",
+        mimetype="text/csv"
     )
 
 
