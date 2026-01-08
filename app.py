@@ -38,9 +38,24 @@ app.secret_key = "pm-cona-secret"
 @app.route("/", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        session["user"] = request.form["username"]
-        return redirect(url_for("departments"))
+        username = request.form["username"]
+        password = request.form["password"]
+
+        # TEMP STATIC AUTH (REPLACE WITH DB LATER)
+        if username == "admin" and password == "admin123":
+            session["user"] = username
+            session["role"] = "admin"
+            return redirect(url_for("departments"))
+
+        elif username == "user" and password == "user123":
+            session["user"] = username
+            session["role"] = "user"
+            return redirect(url_for("departments"))
+
+        return render_template("login.html", error="Invalid credentials")
+
     return render_template("login.html")
+
 
 
 # -------------------------------------------------
@@ -140,10 +155,19 @@ def kpis_with_subdept(dept_id, sub_id, kra_id):
     )
 
 
-# UPLOAD + RUN KPI  (FIXED)
+# -------------------------------------------------
+# UPLOAD + RUN KPI (ADMIN ONLY) — ONE STEP FLOW
 # -------------------------------------------------
 @app.route("/upload/<kpi_id>", methods=["GET", "POST"])
 def upload(kpi_id):
+
+    # 🔐 ROLE CHECK
+    if session.get("role") != "admin":
+        return render_template(
+            "access_denied.html",
+            message="Only admins can upload KPI files."
+        ), 403
+
     if kpi_id not in KPI_REGISTRY:
         return "Invalid KPI", 404
 
@@ -151,9 +175,13 @@ def upload(kpi_id):
 
     # ---------- GET ----------
     if request.method == "GET":
-        return render_template("upload.html", kpi=kpi)
+        return render_template(
+            "upload.html",
+            kpi=kpi
+        )
 
     # ---------- POST ----------
+    # Load files
     dfs = []
     for f in kpi["files"]:
         file = request.files.get(f)
@@ -168,10 +196,7 @@ def upload(kpi_id):
 
     summary = {}
     df = None
-    table_html = None
-    charts = {}
 
-    # ---------- NORMALIZE RESULT ----------
     if isinstance(result, tuple) and len(result) == 2:
         summary, df = result
     elif isinstance(result, pd.DataFrame):
@@ -181,52 +206,88 @@ def upload(kpi_id):
     else:
         summary = {"Result": str(result)}
 
-    # ---------- TABLE + CHARTS ----------
-    if df is not None:
-        table_html = df.to_html(
-            classes="table",
-            index=False,
-            border=0
-        )
+    if df is None:
+        return "No tabular data produced", 400
 
-        charts = generate_charts(df, kpi.get("charts", []))
+    # ---------- TABLE COLUMN FILTER ----------
+    selected_columns = request.form.getlist("table_columns")
 
+    df_table = df  # default → full table
+    if selected_columns:
+        valid_columns = [c for c in selected_columns if c in df.columns]
+        if valid_columns:
+            df_table = df[valid_columns]
 
-        # 🔥 SAFE TEMP FILE STORAGE (NO SESSION BLOAT)
-        report_id = str(uuid.uuid4())
-        report_path = os.path.join(TMP_DIR, f"{report_id}.csv")
-        df.to_csv(report_path, index=False)
+    # ---------- TABLE ----------
+    table_html = df_table.to_html(
+        classes="table",
+        index=False,
+        border=0
+    )
 
-        
+    # ---------- CHARTS (FULL DATA ONLY) ----------
+    charts = generate_charts(df, kpi.get("charts", []))
 
-        session["report_path"] = report_path
+    # ---------- SAVE REPORT ----------
+    report_id = str(uuid.uuid4())
+    report_path = os.path.join(TMP_DIR, f"{report_id}.csv")
+    df_table.to_csv(report_path, index=False)
 
+    session["report_path"] = report_path
+    session["last_kpi"] = kpi_id
+
+    # ---------- FORMAT SUMMARY ----------
     formatted_summary = {}
-
     for key, value in summary.items():
         key_lower = key.lower()
+        if "%" in key_lower or "percent" in key_lower:
+            formatted_summary[key] = format_number(value, "percent")
+        elif "value" in key_lower or "amount" in key_lower:
+            formatted_summary[key] = format_number(value, "currency")
+        elif "item" in key_lower or "count" in key_lower or "total" in key_lower:
+            formatted_summary[key] = format_number(value, "count")
+        else:
+            formatted_summary[key] = format_number(value)
 
-    if "%" in key_lower or "percent" in key_lower:
-        formatted_summary[key] = format_number(value, "percent")
-
-    elif "value" in key_lower or "amount" in key_lower:
-        formatted_summary[key] = format_number(value, "currency")
-
-    elif "item" in key_lower or "count" in key_lower or "total" in key_lower:
-        formatted_summary[key] = format_number(value, "count")
-
-    else:
-        formatted_summary[key] = format_number(value)
-
+    template_name = kpi.get("template", "dashboard.html")
 
     return render_template(
-        "dashboard.html",
+        template_name,
         label=kpi["label"],
         summary=formatted_summary,
         table_html=table_html,
         charts=charts
     )
 
+
+
+# -------------------------------------------------
+# VIEW KPI (USER VIEW-ONLY)
+# -------------------------------------------------
+@app.route("/view/<kpi_id>")
+def view_kpi(kpi_id):
+
+    if kpi_id not in KPI_REGISTRY:
+        return "Invalid KPI", 404
+
+    report_path = session.get("report_path")
+    if not report_path or not os.path.exists(report_path):
+        return "No KPI data available. Ask admin to upload.", 400
+
+    df = pd.read_csv(report_path)
+    kpi = KPI_REGISTRY[kpi_id]
+
+    charts = generate_charts(df, kpi.get("charts", []))
+
+    template_name = kpi.get("template", "dashboard.html")
+
+    return render_template(
+        template_name,
+        label=kpi["label"],
+        summary={},
+        table_html=df.to_html(classes="table", index=False),
+        charts=charts
+    )
 
 
 # -------------------------------------------------

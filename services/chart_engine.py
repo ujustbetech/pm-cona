@@ -13,6 +13,8 @@ def generate_charts(df, chart_configs):
         # DONUT CHART (CATEGORY BASED)
         # -------------------------------------------------
         if chart_type == "donut":
+            color_map = cfg.get("colors")
+            
             fig = px.pie(
                 df,
                 names=cfg["column"],
@@ -37,6 +39,36 @@ def generate_charts(df, chart_configs):
                 ),
                 margin=dict(t=60, b=20, l=20, r=120)
             )
+        # -------------------------------------------------
+# DONUT VALUE CHART (VALUE BASED)
+# -------------------------------------------------
+        elif chart_type == "donut_value":
+            fig = px.pie(
+                df,
+                names=cfg["column"],
+                values=df[cfg["value"]],
+                hole=0.55,
+                title=title
+            )
+
+            fig.update_traces(
+                domain=dict(x=[0.0, 0.45]),
+                textinfo="percent+label",
+                textposition="outside",
+                pull=[0.02] * len(df)
+            )
+
+            fig.update_layout(
+                legend=dict(
+                    orientation="v",
+                    yanchor="middle",
+                    y=0.5,
+                    xanchor="left",
+                    x=0.7
+                ),
+                margin=dict(t=60, b=20, l=20, r=120)
+            )
+
 
         # -------------------------------------------------
         # BAR CHART

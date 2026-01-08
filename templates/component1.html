@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 style="color: white;">{{ label }}</h2>
+<!-- <h3>% of Transfers Completed on Schedule</h3> -->
+
+<!-- KPI SUMMARY
+<div class="kpi-container">
+  {% for key, value in summary.items() %}
+    <div class="kpi-card">
+      <div class="kpi-value">{{ value }}</div>
+      <div class="kpi-label">
+        {{ key.replace('_',' ').title() }}
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+<hr> -->
+
+<!-- CHARTS -->
+{% if charts %}
+  <div class="chart-grid">
+
+    <!-- Chart 0 -->
+    {% if charts.chart_0 %}
+      <div class="chart-card">
+        <h3>Transfer Order Status</h3>
+        {{ charts.chart_0 | safe }}
+      </div>
+    {% endif %}
+
+    <!-- Chart 1 -->
+    {% if charts.chart_1 %}
+      <div class="chart-card">
+        <h3>Completion Ratio</h3>
+        {{ charts.chart_1 | safe }}
+      </div>
+    {% endif %}
+
+    <!-- Chart 2 -->
+    {% if charts.chart_2 %}
+      <div class="chart-card">
+        <h3>Month-on-Month Pending Transfers</h3>
+        {{ charts.chart_2 | safe }}
+      </div>
+    {% endif %}
+
+  </div>
+{% endif %}
+<h2 style="color:white;">KPI data in Table</h2>
+<hr>
+
+<!-- TABLE -->
+{% if table_html %}
+  <div class="table-wrapper">
+    {{ table_html | safe }}
+  </div>
+{% endif %}
+
+<br>
+<a href="/departments">← Back</a>
+
+{% endblock %}

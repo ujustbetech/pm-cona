@@ -34,9 +34,19 @@ def run_component2(df: pd.DataFrame):
     df = df[required_cols]
 
     # ----------------------------
-    # TYPE CLEANING
+    # TYPE CLEANING (ADD ROBUST DATE PARSING LIKE BACKUP)
     # ----------------------------
-    df["Posting Date"] = pd.to_datetime(df["Posting Date"], errors="coerce")
+    def to_date(val):
+        if pd.isna(val):
+            return pd.NaT
+        if isinstance(val, (int, float)):
+            try:
+                return pd.to_datetime(val, unit='D', origin='1899-12-30')
+            except:
+                return pd.NaT
+        return pd.to_datetime(val, errors='coerce', dayfirst=True)
+
+    df["Posting Date"] = df["Posting Date"].apply(to_date)
 
     df["Quantity"] = pd.to_numeric(df["Quantity"], errors="coerce").fillna(0)
     df["Remaining Quantity"] = pd.to_numeric(
@@ -54,7 +64,7 @@ def run_component2(df: pd.DataFrame):
         .replace("nan", "UNKNOWN")
     )
 
-    today = pd.Timestamp(datetime.today().date())
+    today = pd.Timestamp(datetime.now().date())
 
     # ----------------------------
     # LAST OUTWARD DATE
@@ -114,11 +124,10 @@ def run_component2(df: pd.DataFrame):
     result["Days Dormant Display"] = result["Days Dormant"].fillna("Never Moved")
 
     # ----------------------------
-    # KPI SUMMARY
+    # KPI SUMMARY (PRE-AGGREGATE VALUE % FOR CHART)
     # ----------------------------
-    total_value = result["Stock_Value"].sum()
-    slow_value = result[result["Status"] == "Slow-Moving"]["Stock_Value"].sum()
-    dead_value = result[result["Status"] == "Dead"]["Stock_Value"].sum()
+    status_value = result.groupby('Status')['Stock_Value'].sum()
+    total_value = status_value.sum()
 
     summary = {
         "Total Items": len(result),
@@ -126,10 +135,23 @@ def run_component2(df: pd.DataFrame):
         "Slow-Moving Items": int((result["Status"] == "Slow-Moving").sum()),
         "Dead Items": int((result["Status"] == "Dead").sum()),
         "Total Value": total_value,
-        "Slow-Moving Value": slow_value,
-        "Dead Value": dead_value,
-        "Slow %": (slow_value / total_value * 100) if total_value else 0,
-        "Dead %": (dead_value / total_value * 100) if total_value else 0,
+        "Active Value": status_value.get("Active", 0),
+        "Slow-Moving Value": status_value.get("Slow-Moving", 0),
+        "Dead Value": status_value.get("Dead", 0),
+        "Active %": round(status_value.get("Active", 0) / total_value * 100, 1) if total_value else 0,
+        "Slow-Moving %": round(status_value.get("Slow-Moving", 0) / total_value * 100, 1) if total_value else 0,
+        "Dead %": round(status_value.get("Dead", 0) / total_value * 100, 1) if total_value else 0,
     }
+
+    # # NEW: Pre-aggregated DataFrame for value-based donut (alternative to engine support)
+    # # Create one row per status, with 'weight' = % value (engine will "count" these for proportions)
+    # agg_data = {
+    #     'Status': ['Active', 'Slow-Moving', 'Dead'],
+    #     'Weight': [summary["Active %"], summary["Slow-Moving %"], summary["Dead %"]]  # Proportions as "counts"
+    # }
+    # agg_df = pd.DataFrame(agg_data)
+    # # Append to result (engine will use this for donut on 'Status', summing/counting Weight implicitly via row proportions)
+    # result = pd.concat([result, agg_df], ignore_index=True)
+    
 
     return summary, result

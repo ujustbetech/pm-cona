@@ -8,11 +8,11 @@ DEPARTMENTS = {
         "has_subdepartments": True,
         "subdepartments": {
 
-            "led": {
+            "Overall Sale Items": {
                 "label": "LED",
                 "kras": {
-                    "inventory_supply_chain": {
-                        "label": "Inventory and Supply Chain Management",
+                    "inventory_&_supply_chain_mgmt": {
+                        "label": "Inventory and Supply Chain Managemen",
                         "kpis": ["inventory_dormancy"]
                     }
                 }
@@ -32,7 +32,7 @@ DEPARTMENTS = {
                 }
             },
 
-            "procurement_vendor_management": {
+            "procurement_&_vendor_management": {
                 "label": "Procurement & Vendor Management",
                 "kras": {
                     "business_development": {
@@ -73,10 +73,10 @@ DEPARTMENTS = {
 
             "sales_order_management": {
                 "label": "Sales Order Management",
-                "kpis": ["order_delivery"]
+                "kpis": [ "sales_invoice" ]
             },
 
-            "sales_order_invoice_management": {
+            "sales_order_&_invoice_management": {
                 "label": "Sales Order & Invoice Management",
                 "kpis": ["short_closed_so"]
             },

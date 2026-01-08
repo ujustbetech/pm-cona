@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2 style="color: white;">{{ label }}</h2>
+<!-- <h4>Sales Order to Invoice Completion (O2C)</h4> -->
+
+<!-- <hr> -->
+
+<!-- KPI SUMMARY -->
+<!-- <div class="kpi-container">
+  {% for key, value in summary.items() %}
+    <div class="kpi-card">
+      <div class="kpi-value">{{ value }}</div>
+      <div class="kpi-label">
+        {{ key.replace('_',' ').title() }}
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+<hr> -->
+
+<!-- CHARTS -->
+{% if charts %}
+  <div class="chart-grid">
+
+    {% if charts.chart_0 %}
+      <div class="chart-card">
+        <h3>Shipment Completion Status</h3>
+        {{ charts.chart_0 | safe }}
+      </div>
+    {% endif %}
+
+    {% if charts.chart_1 %}
+      <div class="chart-card">
+        <h3>Order to Invoice (O2C) Cycle Time</h3>
+        {{ charts.chart_1 | safe }}
+      </div>
+    {% endif %}
+
+  </div>
+{% endif %}
+<h2 style="color:white;">KPI data in Table</h2>
+<hr>
+
+<!-- TABLE -->
+{% if table_html %}
+  <div class="table-wrapper">
+    {{ table_html | safe }}
+  </div>
+{% endif %}
+
+<a href="/departments">← Back</a>
+
+{% endblock %}

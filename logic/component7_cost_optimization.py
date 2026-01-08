@@ -1,17 +1,13 @@
 import pandas as pd
 
 
-def run_component7(
-    df_item: pd.DataFrame,
-    df_ledger: pd.DataFrame
-):
+def run_component7(df_item: pd.DataFrame, df_ledger: pd.DataFrame):
     """
-    Component 7 — Cost Optimization / Stock Health
-    Serverless-safe (Vercel compatible)
-    Logic preserved exactly
+    Component 7 — PM Stock Health
+    Logic matches backup EXACTLY
     """
 
-    # ---------- COPY & CLEAN ----------
+    # ---------- CLEAN ----------
     df_item = df_item.copy()
     df_ledger = df_ledger.copy()
 
@@ -29,48 +25,101 @@ def run_component7(
         "Remaining Quantity": "Remaining_Qty"
     })
 
-    # ---------- FILTER VALID STOCK ----------
+    # =====================================================
+    # CHANGE 1️⃣ — NORMALIZE DESCRIPTION (backup parity)
+    # =====================================================
+    df_ledger["Description"] = (
+        df_ledger["Description"]
+        .fillna("No Description")
+        .astype(str)
+        .str.strip()
+    )
+
+    # =====================================================
+    # CHANGE 2️⃣ — PRESERVE FULL LEDGER (ALL ITEMS)
+    # =====================================================
+    full_ledger = df_ledger.copy()
+
+    # ---------- PM ITEMS ONLY (CRITICAL) ----------
+    pm_items = df_item[df_item["Product_Group"] == "PM"]["Item_No"].unique()
+    df_ledger = df_ledger[df_ledger["Item_No"].isin(pm_items)]
+
+    # ---------- AGGREGATE ITEM + LOCATION ----------
     df_ledger["Remaining_Qty"] = pd.to_numeric(
         df_ledger["Remaining_Qty"],
         errors="coerce"
     ).fillna(0)
 
-    df_ledger = df_ledger[df_ledger["Remaining_Qty"] > 0]
-
-    # ---------- MERGE ----------
-    df = df_ledger.merge(
-        df_item[["Item_No", "Product_Group"]],
-        on="Item_No",
-        how="left"
+    stock = (
+        df_ledger
+        .groupby(["Item_No", "Location Code"], as_index=False)
+        .agg(Remaining_Qty=("Remaining_Qty", "sum"))
     )
 
-    # ---------- STOCK BUCKET (UNCHANGED LOGIC) ----------
+    stock = stock[stock["Remaining_Qty"] > 0].copy()
+
+    # ---------- STATUS BUCKET (UNCHANGED) ----------
     def stock_bucket(qty):
         if qty <= 50000:
-            return "RED"
+            return "CRITICAL"
         elif qty <= 200000:
-            return "YELLOW"
+            return "MODERATE"
         else:
-            return "GREEN"
+            return "HEALTHY"
 
-    df["Stock_Status"] = df["Remaining_Qty"].apply(stock_bucket)
+    stock["Stock_Status"] = stock["Remaining_Qty"].apply(stock_bucket)
 
-    # ---------- LOCATION LEVEL ----------
-    location_view = (
-        df.groupby(
-            ["Item_No", "Location Code", "Stock_Status"],
-            as_index=False
-        )
-        .agg(Total_Qty=("Remaining_Qty", "sum"))
+    # ---------- PIE DATA (SUMMARY ROWS) ----------
+    pie_df = (
+        stock
+        .groupby("Stock_Status")
+        .size()
+        .reindex(["CRITICAL", "MODERATE", "HEALTHY"], fill_value=0)
+        .reset_index(name="Count")
     )
 
-    # ---------- COMPANY LEVEL ----------
-    company_view = (
-        df.groupby(
-            ["Item_No", "Stock_Status"],
+    total = pie_df["Count"].sum()
+    pie_df["Percentage"] = (pie_df["Count"] / total * 100).round(1)
+    pie_df["row_type"] = "SUMMARY"
+
+    # =====================================================
+    # CHANGE 3️⃣ — DETAIL TABLE FROM *ALL ITEMS*
+    # =====================================================
+    detail_df = (
+        full_ledger
+        .groupby(
+            ["Item_No", "Description", "Location Code"],
             as_index=False
         )
-        .agg(Total_Qty=("Remaining_Qty", "sum"))
+        .agg(Stock_Qty=("Remaining_Qty", "sum"))
     )
 
-    return df, location_view, company_view
+    detail_df = detail_df[detail_df["Stock_Qty"] > 0].copy()
+
+    def stock_bucket_verbose(qty):
+        if qty <= 50000:
+            return "CRITICAL (Critical)"
+        elif qty <= 200000:
+            return "MODERATE (Moderate)"
+        else:
+            return "HEALTHY (Healthy)"
+
+    detail_df["Status"] = detail_df["Stock_Qty"].apply(stock_bucket_verbose)
+    detail_df["row_type"] = "DETAIL"
+
+    # ---------- COMBINED OUTPUT ----------
+    final_df = pd.concat(
+        [pie_df, detail_df],
+        ignore_index=True,
+        sort=False
+    )
+
+    # ---------- SUMMARY ----------
+    summary = {
+        "Total_PM_Stock_Lines": int(total),
+        "CRITICAL": int(pie_df.loc[pie_df["Stock_Status"] == "CRITICAL", "Count"].sum()),
+        "MODERATE": int(pie_df.loc[pie_df["Stock_Status"] == "MODERATE", "Count"].sum()),
+        "HEALTHY": int(pie_df.loc[pie_df["Stock_Status"] == "HEALTHY", "Count"].sum()),
+    }
+
+    return summary, final_df
