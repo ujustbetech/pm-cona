@@ -265,7 +265,7 @@ KPI_REGISTRY = {
         {          
             "type": "donut",
             "column": "On_Time",
-            "title": "Overall On-Time RM SPO Delivery"
+            "title": "Overall On-Time RM PO Delivery"
         },
        
     ]

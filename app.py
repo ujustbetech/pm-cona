@@ -14,6 +14,7 @@ from registry.kpis import KPI_REGISTRY
 from services.excel_loader import load_excel
 from services.chart_engine import generate_charts
 from services.formatters import format_number
+from services.kpi_storage import save_kpi_result, load_kpi_result
 
 
 
@@ -158,15 +159,13 @@ def kpis_with_subdept(dept_id, sub_id, kra_id):
 # -------------------------------------------------
 # UPLOAD + RUN KPI (ADMIN ONLY) — ONE STEP FLOW
 # -------------------------------------------------
+
 @app.route("/upload/<kpi_id>", methods=["GET", "POST"])
 def upload(kpi_id):
 
-    # 🔐 ROLE CHECK
+    # 🔐 ADMIN ONLY
     if session.get("role") != "admin":
-        return render_template(
-            "access_denied.html",
-            message="Only admins can upload KPI files."
-        ), 403
+        return render_template("access_denied.html"), 403
 
     if kpi_id not in KPI_REGISTRY:
         return "Invalid KPI", 404
@@ -175,13 +174,9 @@ def upload(kpi_id):
 
     # ---------- GET ----------
     if request.method == "GET":
-        return render_template(
-            "upload.html",
-            kpi=kpi
-        )
+        return render_template("upload.html", kpi=kpi)
 
     # ---------- POST ----------
-    # Load files
     dfs = []
     for f in kpi["files"]:
         file = request.files.get(f)
@@ -194,8 +189,7 @@ def upload(kpi_id):
     func = getattr(module, kpi["function"])
     result = func(*dfs)
 
-    summary = {}
-    df = None
+    summary, df = {}, None
 
     if isinstance(result, tuple) and len(result) == 2:
         summary, df = result
@@ -211,8 +205,8 @@ def upload(kpi_id):
 
     # ---------- TABLE COLUMN FILTER ----------
     selected_columns = request.form.getlist("table_columns")
+    df_table = df
 
-    df_table = df  # default → full table
     if selected_columns:
         valid_columns = [c for c in selected_columns if c in df.columns]
         if valid_columns:
@@ -225,16 +219,8 @@ def upload(kpi_id):
         border=0
     )
 
-    # ---------- CHARTS (FULL DATA ONLY) ----------
+    # ---------- CHARTS (FULL DF ONLY) ----------
     charts = generate_charts(df, kpi.get("charts", []))
-
-    # ---------- SAVE REPORT ----------
-    report_id = str(uuid.uuid4())
-    report_path = os.path.join(TMP_DIR, f"{report_id}.csv")
-    df_table.to_csv(report_path, index=False)
-
-    session["report_path"] = report_path
-    session["last_kpi"] = kpi_id
 
     # ---------- FORMAT SUMMARY ----------
     formatted_summary = {}
@@ -249,6 +235,14 @@ def upload(kpi_id):
         else:
             formatted_summary[key] = format_number(value)
 
+    # ✅ SAVE KPI RESULT (THIS IS THE FIX)
+    save_kpi_result(
+        kpi_id=kpi_id,
+        summary=formatted_summary,
+        df=df_table,
+        charts=charts
+    )
+
     template_name = kpi.get("template", "dashboard.html")
 
     return render_template(
@@ -260,7 +254,6 @@ def upload(kpi_id):
     )
 
 
-
 # -------------------------------------------------
 # VIEW KPI (USER VIEW-ONLY)
 # -------------------------------------------------
@@ -270,21 +263,17 @@ def view_kpi(kpi_id):
     if kpi_id not in KPI_REGISTRY:
         return "Invalid KPI", 404
 
-    report_path = session.get("report_path")
-    if not report_path or not os.path.exists(report_path):
-        return "No KPI data available. Ask admin to upload.", 400
+    summary, df, charts = load_kpi_result(kpi_id)
 
-    df = pd.read_csv(report_path)
+    if df is None:
+        return "KPI not yet run by admin", 404
+
     kpi = KPI_REGISTRY[kpi_id]
 
-    charts = generate_charts(df, kpi.get("charts", []))
-
-    template_name = kpi.get("template", "dashboard.html")
-
     return render_template(
-        template_name,
+        kpi.get("template", "dashboard.html"),
         label=kpi["label"],
-        summary={},
+        summary=summary,
         table_html=df.to_html(classes="table", index=False),
         charts=charts
     )
