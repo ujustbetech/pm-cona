@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1 class="page-title">Select KPI</h1>
+
+<div class="card-grid">
+
+  {% for kpi_id, kpi in kpis.items() %}
+
+    {% if session.get("role") == "admin" %}
+      <!-- ADMIN: Upload & Run KPI -->
+      <a href="{{ url_for('upload', kpi_id=kpi_id) }}"
+         class="nav-card">
+        <h2>{{ kpi.label }}</h2>
+        <p>Upload data & publish KPI</p>
+      </a>
+
+    {% else %}
+      <!-- USER: View Published KPI -->
+      <a href="{{ url_for('view_kpi', kpi_id=kpi_id) }}"
+         class="nav-card">
+        <h2>{{ kpi.label }}</h2>
+        <p>View latest published dashboard</p>
+      </a>
+    {% endif %}
+
+  {% endfor %}
+
+</div>
+
+{% endblock %}

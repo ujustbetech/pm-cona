@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1 class="page-title">Select Department</h1>
+
+<div class="card-grid">
+
+  <a href="{{ url_for('kras', dept_id='sales_marketing') }}"
+     class="nav-card">
+    <h2>Sales & Marketing</h2>
+    <p>View sub-departments, KRAs & KPIs</p>
+  </a>
+
+  <a href="{{ url_for('kras', dept_id='purchase') }}"
+     class="nav-card">
+    <h2>Purchase</h2>
+    <p>View KRAs & KPIs</p>
+  </a>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="dashboard-container">
+
+  <!-- KPI Title -->
+  <h1 class="page-title">{{ label }}</h1>
+  <p class="kpi-subtitle">Performance overview based on uploaded data</p>
+
+  <!-- Actions -->
+  <div class="dashboard-actions">
+    <a href="{{ url_for('download_report') }}" class="download-btn">
+      ⬇ Download Excel Report
+    </a>
+  </div>
+
+  <!-- KPI CARDS (ONLY ONCE) -->
+  {% if summary %}
+  <div class="kpi-container">
+    {% for key, value in summary.items() %}
+      <div class="kpi-card">
+        <div class="kpi-value">{{ value }}</div>
+        <div class="kpi-label">{{ key }}</div>
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- CHARTS -->
+  {% if charts %}
+  <div class="chart-grid">
+    {% for chart in charts.values() %}
+      <div class="chart-card">
+        {{ chart | safe }}
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- DATA TABLE -->
+  {% if table_html %}
+  <div class="table-card">
+    <h2 class="section-title">Detailed Records</h2>
+    <div class="table-wrapper">
+      {{ table_html | safe }}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+{% endblock %}

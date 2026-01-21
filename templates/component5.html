@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 style="color: white;">KPI Name: {{ label }} (Data Period :Apr-Nov'25)</h2>
+<h4>100% RM Requisitions Fulfilled Within Defined SLA</h4>
+
+<hr>
+
+<!-- KPI SUMMARY -->
+<div class="kpi-container">
+  {% for key, value in summary.items() %}
+    <div class="kpi-card">
+      <div class="kpi-value">{{ value }}</div>
+      <div class="kpi-label">
+        {{ key.replace('_',' ').title() }}
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+<hr>
+
+<!-- CHARTS -->
+{% if charts %}
+  <div class="chart-grid">
+
+    {% if charts.chart_0 %}
+      <div class="chart-card">
+        <h3>SLA Distribution</h3>
+        {{ charts.chart_0 | safe }}
+      </div>
+    {% endif %}
+
+    {% if charts.chart_1 %}
+      <div class="chart-card">
+        <h3>SLA Performance by Period</h3>
+        {{ charts.chart_1 | safe }}
+      </div>
+    {% endif %}
+
+    {% if charts.chart_2 %}
+      <div class="chart-card">
+        <h3>Month-on-Month SLA Trend</h3>
+        {{ charts.chart_2 | safe }}
+      </div>
+    {% endif %}
+
+  </div>
+{% endif %}
+<h2 style="color:white;">KPI data table</h2>
+<hr>
+
+<!-- TABLE -->
+{% if table_html %}
+  <div class="table-wrapper">
+        {{ table_html | safe | replace('PO_No', 'PO No') | replace('Order_Date', 'Order Date') | replace('Last_Receipt_Date', 'Last Receipt Date') | replace('Days_To_Receive', 'Days To Receive') | replace('Order_Quarter', 'Order Quarter') | replace('On_Time', 'Late/On Time') }}
+  </div>
+{% endif %}
+
+<a href="/departments">← Back</a>
+
+{% endblock %}

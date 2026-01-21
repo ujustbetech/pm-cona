@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1 class="page-title">{{ kpi.label }}</h1>
+
+<div class="upload-card">
+
+  <form method="POST" enctype="multipart/form-data">
+
+    <!-- ================= FILE UPLOADS ================= -->
+    {% for file_key in kpi.files %}
+      <div class="file-group">
+        <label class="file-label">
+          {{ file_key.replace('_', ' ').title() }}
+        </label>
+
+        <input
+          type="file"
+          name="{{ file_key }}"
+          required
+          class="file-input"
+        >
+      </div>
+    {% endfor %}
+
+    <hr>
+
+    <!-- ================= COLUMN SELECTION ================= -->
+    <div class="file-group">
+      <label class="file-label">
+        Columns to display in table (optional)
+      </label>
+
+      <select
+        name="table_columns"
+        multiple
+        class="column-multiselect"
+      >
+        {% for col in kpi.table_columns %}
+          <option value="{{ col }}">{{ col }}</option>
+        {% endfor %}
+      </select>
+
+      <small class="hint">
+        Hold <b>Ctrl</b> (Windows) or <b>Cmd</b> (Mac) to select multiple.
+        <br>
+        If nothing is selected, all columns will be shown.
+      </small>
+
+      <div class="select-actions">
+        <button type="button" onclick="selectAll()">Select All</button>
+        <button type="button" onclick="clearAll()">Clear</button>
+      </div>
+    </div>
+
+    <!-- ================= SUBMIT ================= -->
+    <button type="submit" class="run-btn">
+      RUN KPI
+    </button>
+
+  </form>
+
+</div>
+
+<!-- ================= JS ================= -->
+<script>
+function selectAll() {
+  const select = document.querySelector(".column-multiselect");
+  for (let option of select.options) {
+    option.selected = true;
+  }
+}
+
+function clearAll() {
+  const select = document.querySelector(".column-multiselect");
+  for (let option of select.options) {
+    option.selected = false;
+  }
+}
+</script>
+
+{% endblock %}

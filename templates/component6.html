@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 style="color: white;">KPI Name: {{ label }} (Data Period :Apr-Nov'25)</h2>
+<h3 style="color: white;">Alignment of KPI with Business Objective: Establish complete Sales hierarchy PAN India to improve dealer service</h3>
+<!-- <h4>% Short-Closed for Non-Shipped Sales Orders</h4> -->
+
+<!-- <hr>
+
+<div class="kpi-container">
+  {% for key, value in summary.items() %}
+    <div class="kpi-card">
+      <div class="kpi-value">{{ value }}</div>
+      <div class="kpi-label">
+        {{ key.replace('_',' ').title() }}
+      </div>
+    </div>
+  {% endfor %}
+</div> -->
+
+<!-- <hr> -->
+
+<!-- CHARTS -->
+{% if charts %}
+  <div class="chart-grid">
+
+    {% if charts.chart_0 %}
+      <div class="chart-card">
+        <h3>Short-Closed vs Not Short-Closed</h3>
+        {{ charts.chart_0 | safe }}
+      </div>
+    {% endif %}
+
+    {% if charts.chart_1 %}
+      <div class="chart-card">
+        <h3>Short-Closed SOs by Month</h3>
+        {{ charts.chart_1 | safe }}
+      </div>
+    {% endif %}
+
+  </div>
+{% endif %}
+<h2 style="color: white;">Observation: Short-Closed vs Not Short Closed Sales Orders: Out of 1387 Short-Closed Not Shipped Sale Orders, 79.9% are Not Short Closed and 20.1% are Short-Closed. <br>Month on Month Short-Closed Sale Orders are[Month(short_closed)] : April(177),May(173), June(163), July(199), August(235), September(246), October(132), November(62)</h2>
+<div style="
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+">
+
+    <h2 style="color:white; margin: 0;">KPI data in Table</h2>
+
+    <div>
+        <a href="javascript:history.back()"  
+           style="
+               background:#ffffff;
+               color:#003d99;
+               padding:8px 16px;
+               border-radius:8px;
+               font-weight:600;
+               text-decoration:none;
+               margin-right:10px;
+               box-shadow:0 2px 5px rgba(0,0,0,0.15);
+           ">
+           ← Back
+        </a>
+
+        <a href="/download/{{ kpi_id }}" 
+           style="
+               background:#ffffff;
+               color:#003d99;
+               padding:8px 16px;
+               border-radius:8px;
+               font-weight:600;
+               text-decoration:none;
+               box-shadow:0 2px 5px rgba(0,0,0,0.15);
+           ">
+            ⬇ Download Excel
+        </a>
+    </div>
+
+</div>
+<hr>
+
+<!-- TABLE -->
+<!-- TABLE -->
+{% if table_html %}
+  <div class="table-wrapper">
+    {{ table_html | safe | replace('Total_Non_Shipped', 'Total Non Shipped') | replace('Short_Closed', 'Short Closed') | replace('Not_Short_Closed', 'Not Short Closed') }}
+  </div>
+{% endif %}
+
+<a href="/departments">← Back</a>
+
+{% endblock %}

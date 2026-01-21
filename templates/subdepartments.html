@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1 class="page-title">Select Sub-Department</h1>
+
+<div class="card-grid">
+
+  {% for sub_id, subdept in subdepartments.items() %}
+
+    <a href="{{ url_for('kras_with_subdept', dept_id=dept_id, sub_id=sub_id) }}"
+       class="nav-card">
+
+      <!-- ✅ SAFE TITLE (never blank) -->
+      <div class="card-title">
+        {{ subdept.get("name", sub_id.replace("_", " ").title()) }}
+      </div>
+
+      <div class="card-subtitle">
+        View KRAs & KPIs
+      </div>
+
+    </a>
+
+  {% endfor %}
+
+</div>
+
+{% endblock %}
